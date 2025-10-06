@@ -2,6 +2,8 @@
 
 This example allows you to deploy a remote MCP server that doesn't require authentication on Cloudflare Workers. 
 
+**NEW:** This repository now includes a complete **Forms Submission Schema (MVP)** smoke test implementation. See [QUICKSTART.md](./QUICKSTART.md) for testing instructions and [FORMS_SCHEMA_SMOKE_TEST.md](./FORMS_SCHEMA_SMOKE_TEST.md) for detailed documentation.
+
 ## Get started: 
 
 [![Deploy to Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/ai/tree/main/demos/remote-mcp-authless)
