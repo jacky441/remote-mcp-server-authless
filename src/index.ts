@@ -64,8 +64,9 @@ export class MyMCP extends McpAgent<Env> {
 			},
 			async ({ name, description }) => {
 				const uuid = generateUUID();
-				const result = await db().prepare(
-						"INSERT INTO forms (uuid, name, description, isActive) VALUES (?, ?, ?, 1)"
+				const result = await db()
+					.prepare(
+						"INSERT INTO forms (uuid, name, description, isActive) VALUES (?, ?, ?, 1)",
 					)
 					.bind(uuid, name, description || null)
 					.run();
@@ -82,27 +83,24 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
-		this.server.tool(
-			"get_form",
-			{ uuid: z.string() },
-			async ({ uuid }) => {
-				const result = await db().prepare("SELECT * FROM forms WHERE uuid = ?")
-					.bind(uuid)
-					.first<Form>();
+		this.server.tool("get_form", { uuid: z.string() }, async ({ uuid }) => {
+			const result = await db()
+				.prepare("SELECT * FROM forms WHERE uuid = ?")
+				.bind(uuid)
+				.first<Form>();
 
-				return {
-					content: [
-						{
-							type: "text",
-							text: JSON.stringify(result || { error: "Form not found" }),
-						},
-					],
-				};
-			}
-		);
+			return {
+				content: [
+					{
+						type: "text",
+						text: JSON.stringify(result || { error: "Form not found" }),
+					},
+				],
+			};
+		});
 
 		this.server.tool(
 			"update_form",
@@ -127,13 +125,17 @@ export class MyMCP extends McpAgent<Env> {
 				if (updates.length === 0) {
 					return {
 						content: [
-							{ type: "text", text: JSON.stringify({ error: "No updates provided" }) },
+							{
+								type: "text",
+								text: JSON.stringify({ error: "No updates provided" }),
+							},
 						],
 					};
 				}
 
 				bindings.push(uuid);
-				const result = await db().prepare(`UPDATE forms SET ${updates.join(", ")} WHERE uuid = ?`)
+				const result = await db()
+					.prepare(`UPDATE forms SET ${updates.join(", ")} WHERE uuid = ?`)
 					.bind(...bindings)
 					.run();
 
@@ -148,15 +150,16 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
 		this.server.tool(
 			"soft_delete_form",
 			{ uuid: z.string() },
 			async ({ uuid }) => {
-				const result = await db().prepare(
-						"UPDATE forms SET deletedAt = datetime('now'), isActive = 0 WHERE uuid = ?"
+				const result = await db()
+					.prepare(
+						"UPDATE forms SET deletedAt = datetime('now'), isActive = 0 WHERE uuid = ?",
 					)
 					.bind(uuid)
 					.run();
@@ -172,7 +175,7 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
 		// 2. CRUD Operations for Form Versions
@@ -185,24 +188,35 @@ export class MyMCP extends McpAgent<Env> {
 				htmlTemplate: z.string().optional(),
 				createdBy: z.string().optional(),
 			},
-			async (
-				{ formUuid, versionNumber, templateJson, htmlTemplate, createdBy }
-			) => {
+			async ({
+				formUuid,
+				versionNumber,
+				templateJson,
+				htmlTemplate,
+				createdBy,
+			}) => {
 				const uuid = generateUUID();
 
 				// Get formId from formUuid
-				const form = await db().prepare("SELECT id FROM forms WHERE uuid = ?")
+				const form = await db()
+					.prepare("SELECT id FROM forms WHERE uuid = ?")
 					.bind(formUuid)
 					.first<{ id: number }>();
 
 				if (!form) {
 					return {
-						content: [{ type: "text", text: JSON.stringify({ error: "Form not found" }) }],
+						content: [
+							{
+								type: "text",
+								text: JSON.stringify({ error: "Form not found" }),
+							},
+						],
 					};
 				}
 
-				const result = await db().prepare(
-						"INSERT INTO form_versions (uuid, formId, versionNumber, templateJson, htmlTemplate, schemaVersion, createdBy) VALUES (?, ?, ?, ?, ?, '1.0.0', ?)"
+				const result = await db()
+					.prepare(
+						"INSERT INTO form_versions (uuid, formId, versionNumber, templateJson, htmlTemplate, schemaVersion, createdBy) VALUES (?, ?, ?, ?, ?, '1.0.0', ?)",
 					)
 					.bind(
 						uuid,
@@ -210,7 +224,7 @@ export class MyMCP extends McpAgent<Env> {
 						versionNumber,
 						templateJson,
 						htmlTemplate || null,
-						createdBy || null
+						createdBy || null,
 					)
 					.run();
 
@@ -226,14 +240,15 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
 		this.server.tool(
 			"get_form_version",
 			{ uuid: z.string() },
 			async ({ uuid }) => {
-				const result = await db().prepare("SELECT * FROM form_versions WHERE uuid = ?")
+				const result = await db()
+					.prepare("SELECT * FROM form_versions WHERE uuid = ?")
 					.bind(uuid)
 					.first<FormVersion>();
 
@@ -241,11 +256,13 @@ export class MyMCP extends McpAgent<Env> {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify(result || { error: "Form version not found" }),
+							text: JSON.stringify(
+								result || { error: "Form version not found" },
+							),
 						},
 					],
 				};
-			}
+			},
 		);
 
 		// 3. CRUD Operations for Form Submissions
@@ -259,17 +276,24 @@ export class MyMCP extends McpAgent<Env> {
 				answer: z.string(),
 				fileRefs: z.string().optional(),
 			},
-			async (
-				{ formUuid, formVersionUuid, refType, refId, answer, fileRefs }
-			) => {
+			async ({
+				formUuid,
+				formVersionUuid,
+				refType,
+				refId,
+				answer,
+				fileRefs,
+			}) => {
 				const uuid = generateUUID();
 
 				// Get formId and formVersionId
-				const form = await db().prepare("SELECT id FROM forms WHERE uuid = ?")
+				const form = await db()
+					.prepare("SELECT id FROM forms WHERE uuid = ?")
 					.bind(formUuid)
 					.first<{ id: number }>();
 
-				const version = await db().prepare("SELECT id FROM form_versions WHERE uuid = ?")
+				const version = await db()
+					.prepare("SELECT id FROM form_versions WHERE uuid = ?")
 					.bind(formVersionUuid)
 					.first<{ id: number }>();
 
@@ -284,8 +308,9 @@ export class MyMCP extends McpAgent<Env> {
 					};
 				}
 
-				const result = await db().prepare(
-						"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, fileRefs, status, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 1)"
+				const result = await db()
+					.prepare(
+						"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, fileRefs, status, isActive) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', 1)",
 					)
 					.bind(
 						uuid,
@@ -294,7 +319,7 @@ export class MyMCP extends McpAgent<Env> {
 						refType,
 						refId,
 						answer,
-						fileRefs || null
+						fileRefs || null,
 					)
 					.run();
 
@@ -310,7 +335,7 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
 		this.server.tool(
@@ -320,8 +345,9 @@ export class MyMCP extends McpAgent<Env> {
 				submittedBy: z.string(),
 			},
 			async ({ uuid, submittedBy }) => {
-				const result = await db().prepare(
-						"UPDATE form_submissions SET status = 'submitted', submittedAt = datetime('now'), submittedBy = ? WHERE uuid = ? AND submittedAt IS NULL"
+				const result = await db()
+					.prepare(
+						"UPDATE form_submissions SET status = 'submitted', submittedAt = datetime('now'), submittedBy = ? WHERE uuid = ? AND submittedAt IS NULL",
 					)
 					.bind(submittedBy, uuid)
 					.run();
@@ -339,14 +365,15 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
 		this.server.tool(
 			"get_form_submission",
 			{ uuid: z.string() },
 			async ({ uuid }) => {
-				const result = await db().prepare("SELECT * FROM form_submissions WHERE uuid = ?")
+				const result = await db()
+					.prepare("SELECT * FROM form_submissions WHERE uuid = ?")
 					.bind(uuid)
 					.first<FormSubmission>();
 
@@ -354,19 +381,22 @@ export class MyMCP extends McpAgent<Env> {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify(result || { error: "Form submission not found" }),
+							text: JSON.stringify(
+								result || { error: "Form submission not found" },
+							),
 						},
 					],
 				};
-			}
+			},
 		);
 
 		this.server.tool(
 			"soft_delete_form_submission",
 			{ uuid: z.string() },
 			async ({ uuid }) => {
-				const result = await db().prepare(
-						"UPDATE form_submissions SET deletedAt = datetime('now'), isActive = 0 WHERE uuid = ?"
+				const result = await db()
+					.prepare(
+						"UPDATE form_submissions SET deletedAt = datetime('now'), isActive = 0 WHERE uuid = ?",
 					)
 					.bind(uuid)
 					.run();
@@ -382,7 +412,7 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
 		// 4. Test Referential Integrity
@@ -394,8 +424,9 @@ export class MyMCP extends McpAgent<Env> {
 
 				// Test 1: Try to create a version for a non-existent form
 				try {
-					await db().prepare(
-							"INSERT INTO form_versions (uuid, formId, versionNumber, templateJson, schemaVersion) VALUES (?, 999999, 1, '{}', '1.0.0')"
+					await db()
+						.prepare(
+							"INSERT INTO form_versions (uuid, formId, versionNumber, templateJson, schemaVersion) VALUES (?, 999999, 1, '{}', '1.0.0')",
 						)
 						.bind(generateUUID())
 						.run();
@@ -405,7 +436,8 @@ export class MyMCP extends McpAgent<Env> {
 				}
 
 				// Test 2: Check UNIQUE constraint on (refType, refId, formId, isActive)
-				const form = await db().prepare("SELECT id FROM forms WHERE uuid = ?")
+				const form = await db()
+					.prepare("SELECT id FROM forms WHERE uuid = ?")
 					.bind(formUuid)
 					.first<{ id: number }>();
 
@@ -413,14 +445,16 @@ export class MyMCP extends McpAgent<Env> {
 					try {
 						const uuid1 = generateUUID();
 						const uuid2 = generateUUID();
-						await db().prepare(
-								"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, status, isActive) VALUES (?, ?, 1, 'test', 'test123', '{}', 'draft', 1)"
+						await db()
+							.prepare(
+								"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, status, isActive) VALUES (?, ?, 1, 'test', 'test123', '{}', 'draft', 1)",
 							)
 							.bind(uuid1, form.id)
 							.run();
 
-						await db().prepare(
-								"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, status, isActive) VALUES (?, ?, 1, 'test', 'test123', '{}', 'draft', 1)"
+						await db()
+							.prepare(
+								"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, status, isActive) VALUES (?, ?, 1, 'test', 'test123', '{}', 'draft', 1)",
 							)
 							.bind(uuid2, form.id)
 							.run();
@@ -441,11 +475,14 @@ export class MyMCP extends McpAgent<Env> {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify({ tests, message: "Referential integrity tests completed" }),
+							text: JSON.stringify({
+								tests,
+								message: "Referential integrity tests completed",
+							}),
 						},
 					],
 				};
-			}
+			},
 		);
 
 		// 5. Test Media Integration
@@ -459,11 +496,13 @@ export class MyMCP extends McpAgent<Env> {
 				const docStoreUuids = [generateUUID(), generateUUID(), generateUUID()];
 				const fileRefsJson = JSON.stringify(docStoreUuids);
 
-				const form = await db().prepare("SELECT id FROM forms WHERE uuid = ?")
+				const form = await db()
+					.prepare("SELECT id FROM forms WHERE uuid = ?")
 					.bind(formUuid)
 					.first<{ id: number }>();
 
-				const version = await db().prepare("SELECT id FROM form_versions WHERE uuid = ?")
+				const version = await db()
+					.prepare("SELECT id FROM form_versions WHERE uuid = ?")
 					.bind(formVersionUuid)
 					.first<{ id: number }>();
 
@@ -479,13 +518,15 @@ export class MyMCP extends McpAgent<Env> {
 				}
 
 				const uuid = generateUUID();
-				await db().prepare(
-						"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, fileRefs, status, isActive) VALUES (?, ?, ?, 'contract', 'C001', '{}', ?, 'draft', 1)"
+				await db()
+					.prepare(
+						"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, fileRefs, status, isActive) VALUES (?, ?, ?, 'contract', 'C001', '{}', ?, 'draft', 1)",
 					)
 					.bind(uuid, form.id, version.id, fileRefsJson)
 					.run();
 
-				const submission = await db().prepare("SELECT fileRefs FROM form_submissions WHERE uuid = ?")
+				const submission = await db()
+					.prepare("SELECT fileRefs FROM form_submissions WHERE uuid = ?")
 					.bind(uuid)
 					.first<{ fileRefs: string }>();
 
@@ -504,7 +545,7 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
 		// 6. Test Immutability
@@ -515,25 +556,36 @@ export class MyMCP extends McpAgent<Env> {
 				const tests: any[] = [];
 
 				// Submit the form first
-				await db().prepare(
-						"UPDATE form_submissions SET status = 'submitted', submittedAt = datetime('now') WHERE uuid = ?"
+				await db()
+					.prepare(
+						"UPDATE form_submissions SET status = 'submitted', submittedAt = datetime('now') WHERE uuid = ?",
 					)
 					.bind(submissionUuid)
 					.run();
 
 				// Test 1: Try to modify answer after submission
 				try {
-					await db().prepare("UPDATE form_submissions SET answer = '{}' WHERE uuid = ?")
+					await db()
+						.prepare("UPDATE form_submissions SET answer = '{}' WHERE uuid = ?")
 						.bind(submissionUuid)
 						.run();
-					tests.push({ test: "Prevent answer modification after submission", passed: false });
+					tests.push({
+						test: "Prevent answer modification after submission",
+						passed: false,
+					});
 				} catch (e) {
-					tests.push({ test: "Prevent answer modification after submission", passed: true });
+					tests.push({
+						test: "Prevent answer modification after submission",
+						passed: true,
+					});
 				}
 
 				// Test 2: Try to modify formVersionId after submission
 				try {
-					await db().prepare("UPDATE form_submissions SET formVersionId = 999 WHERE uuid = ?")
+					await db()
+						.prepare(
+							"UPDATE form_submissions SET formVersionId = 999 WHERE uuid = ?",
+						)
 						.bind(submissionUuid)
 						.run();
 					tests.push({
@@ -549,23 +601,35 @@ export class MyMCP extends McpAgent<Env> {
 
 				// Test 3: Verify that status can still be updated
 				try {
-					await db().prepare("UPDATE form_submissions SET status = 'approved' WHERE uuid = ?")
+					await db()
+						.prepare(
+							"UPDATE form_submissions SET status = 'approved' WHERE uuid = ?",
+						)
 						.bind(submissionUuid)
 						.run();
-					tests.push({ test: "Allow status modification after submission", passed: true });
+					tests.push({
+						test: "Allow status modification after submission",
+						passed: true,
+					});
 				} catch (e) {
-					tests.push({ test: "Allow status modification after submission", passed: false });
+					tests.push({
+						test: "Allow status modification after submission",
+						passed: false,
+					});
 				}
 
 				return {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify({ tests, message: "Immutability tests completed" }),
+							text: JSON.stringify({
+								tests,
+								message: "Immutability tests completed",
+							}),
 						},
 					],
 				};
-			}
+			},
 		);
 
 		// 7. Test Versioning & Superseding Logic
@@ -576,11 +640,13 @@ export class MyMCP extends McpAgent<Env> {
 				formVersionUuid: z.string(),
 			},
 			async ({ formUuid, formVersionUuid }) => {
-				const form = await db().prepare("SELECT id FROM forms WHERE uuid = ?")
+				const form = await db()
+					.prepare("SELECT id FROM forms WHERE uuid = ?")
 					.bind(formUuid)
 					.first<{ id: number }>();
 
-				const version = await db().prepare("SELECT id FROM form_versions WHERE uuid = ?")
+				const version = await db()
+					.prepare("SELECT id FROM form_versions WHERE uuid = ?")
 					.bind(formVersionUuid)
 					.first<{ id: number }>();
 
@@ -597,8 +663,9 @@ export class MyMCP extends McpAgent<Env> {
 
 				// Create first submission
 				const uuid1 = generateUUID();
-				await db().prepare(
-						"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, status, isActive) VALUES (?, ?, ?, 'job', 'J001', '{\"field1\": \"value1\"}', 'draft', 1)"
+				await db()
+					.prepare(
+						"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, status, isActive) VALUES (?, ?, ?, 'job', 'J001', '{\"field1\": \"value1\"}', 'draft', 1)",
 					)
 					.bind(uuid1, form.id, version.id)
 					.run();
@@ -607,26 +674,32 @@ export class MyMCP extends McpAgent<Env> {
 				const uuid2 = generateUUID();
 
 				// First, deactivate the old submission
-				await db().prepare(
-						"UPDATE form_submissions SET isActive = 0, supersededBy = ? WHERE uuid = ?"
+				await db()
+					.prepare(
+						"UPDATE form_submissions SET isActive = 0, supersededBy = ? WHERE uuid = ?",
 					)
 					.bind(uuid2, uuid1)
 					.run();
 
 				// Then create the new submission
-				await db().prepare(
-						"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, status, isActive) VALUES (?, ?, ?, 'job', 'J001', '{\"field1\": \"value2\"}', 'draft', 1)"
+				await db()
+					.prepare(
+						"INSERT INTO form_submissions (uuid, formId, formVersionId, refType, refId, answer, status, isActive) VALUES (?, ?, ?, 'job', 'J001', '{\"field1\": \"value2\"}', 'draft', 1)",
 					)
 					.bind(uuid2, form.id, version.id)
 					.run();
 
 				// Query to verify only active submission
-				const activeSubmissions = await db().prepare(
-						"SELECT uuid, answer, isActive FROM form_submissions WHERE refType = 'job' AND refId = 'J001' AND isActive = 1"
+				const activeSubmissions = await db()
+					.prepare(
+						"SELECT uuid, answer, isActive FROM form_submissions WHERE refType = 'job' AND refId = 'J001' AND isActive = 1",
 					)
 					.all();
 
-				const supersededSubmission = await db().prepare("SELECT uuid, supersededBy FROM form_submissions WHERE uuid = ?")
+				const supersededSubmission = await db()
+					.prepare(
+						"SELECT uuid, supersededBy FROM form_submissions WHERE uuid = ?",
+					)
 					.bind(uuid1)
 					.first();
 
@@ -645,7 +718,7 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
 		// 8. Test Performance Queries
@@ -657,8 +730,9 @@ export class MyMCP extends McpAgent<Env> {
 
 				// Query 1: Get all active submissions for a reference
 				const start1 = Date.now();
-				const result1 = await db().prepare(
-						"SELECT * FROM form_submissions WHERE refType = ? AND refId = ? AND isActive = 1"
+				const result1 = await db()
+					.prepare(
+						"SELECT * FROM form_submissions WHERE refType = ? AND refId = ? AND isActive = 1",
 					)
 					.bind(refType, refId)
 					.all();
@@ -670,8 +744,9 @@ export class MyMCP extends McpAgent<Env> {
 
 				// Query 2: Get form with its current version
 				const start2 = Date.now();
-				const result2 = await db().prepare(
-						"SELECT f.*, fv.* FROM forms f LEFT JOIN form_versions fv ON f.currentVersionId = fv.id WHERE f.isActive = 1"
+				const result2 = await db()
+					.prepare(
+						"SELECT f.*, fv.* FROM forms f LEFT JOIN form_versions fv ON f.currentVersionId = fv.id WHERE f.isActive = 1",
 					)
 					.all();
 				queries.push({
@@ -682,8 +757,9 @@ export class MyMCP extends McpAgent<Env> {
 
 				// Query 3: Get all versions of a form
 				const start3 = Date.now();
-				const result3 = await db().prepare(
-						"SELECT * FROM form_versions WHERE formId IN (SELECT id FROM forms WHERE isActive = 1) ORDER BY versionNumber DESC"
+				const result3 = await db()
+					.prepare(
+						"SELECT * FROM form_versions WHERE formId IN (SELECT id FROM forms WHERE isActive = 1) ORDER BY versionNumber DESC",
 					)
 					.all();
 				queries.push({
@@ -703,17 +779,14 @@ export class MyMCP extends McpAgent<Env> {
 						},
 					],
 				};
-			}
+			},
 		);
 
 		// 9. Initialize Database Schema
-		this.server.tool(
-			"init_database_schema",
-			{},
-			async (_) => {
-				try {
-					// Read the migration file content inline
-					const migrationSQL = `
+		this.server.tool("init_database_schema", {}, async (_) => {
+			try {
+				// Read the migration file content inline
+				const migrationSQL = `
 -- Forms Submission Schema (MVP)
 CREATE TABLE IF NOT EXISTS forms (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -842,36 +915,35 @@ BEGIN
 END;
 `;
 
-					const result = await db().exec(migrationSQL);
+				const result = await db().exec(migrationSQL);
 
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify({
-									success: true,
-									message: "Database schema initialized successfully",
-									result,
-								}),
-							},
-						],
-					};
-				} catch (error: any) {
-					return {
-						content: [
-							{
-								type: "text",
-								text: JSON.stringify({
-									success: false,
-									error: error.message,
-									message: "Failed to initialize database schema",
-								}),
-							},
-						],
-					};
-				}
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify({
+								success: true,
+								message: "Database schema initialized successfully",
+								result,
+							}),
+						},
+					],
+				};
+			} catch (error: any) {
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify({
+								success: false,
+								error: error.message,
+								message: "Failed to initialize database schema",
+							}),
+						},
+					],
+				};
 			}
-		);
+		});
 
 		// Keep original calculator tools for backward compatibility
 		this.server.tool(
@@ -879,7 +951,7 @@ END;
 			{ a: z.number(), b: z.number() },
 			async ({ a, b }) => ({
 				content: [{ type: "text", text: String(a + b) }],
-			})
+			}),
 		);
 
 		this.server.tool(
@@ -915,7 +987,7 @@ END;
 						break;
 				}
 				return { content: [{ type: "text", text: String(result) }] };
-			}
+			},
 		);
 	}
 }
